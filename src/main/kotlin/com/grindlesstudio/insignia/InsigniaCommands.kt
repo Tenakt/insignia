@@ -18,7 +18,6 @@ object InsigniaCommands {
         SharedSuggestionProvider.suggest(ColorUtils.COLOR_MAP.keys, builder)
     }
 
-    // Поддержка языка: если команду пишет консоль (source.player == null), разрешаем обе ветки
     private fun isRussian(source: CommandSourceStack): Boolean {
         val player = source.player ?: return true
         return LanguageUtils.getLanguage(source).startsWith("ru")
@@ -33,8 +32,7 @@ object InsigniaCommands {
         val player = source.playerOrException
 
         if (PermissionManager.setDisplayMode(player.uuid, slot, mode)) {
-            player.refreshTabListName()
-            player.refreshDisplayName()
+            TabHandler.updatePlayerTab(player)
 
             val slotTranslated = LanguageUtils.getSlotName(source, slot)
             val modeTranslated = LanguageUtils.getModeName(source, mode)
@@ -55,9 +53,7 @@ object InsigniaCommands {
         val dispatcher = event.dispatcher
         val rootNode = Commands.literal("insignia")
 
-        // ---------------------------------------------------------------------
         // 1. СПРАВКА / HELP
-        // ---------------------------------------------------------------------
         rootNode.then(
             Commands.literal("справка")
                 .requires { isRussian(it) }
@@ -74,17 +70,15 @@ object InsigniaCommands {
                 .then(Commands.literal("admin").executes { sendHelp(it.source, "admin"); 1 })
         )
 
-        // ---------------------------------------------------------------------
-        // 2. ВСТУПИТЬ / JOIN
-        // ---------------------------------------------------------------------
+        // 2. ВСТУПИТЬ ИЛИ СМЕНИТЬ ГРУППУ / JOIN
         val joinAction = Commands.argument("group_name", StringArgumentType.word())
             .executes { ctx ->
                 val player = ctx.source.playerOrException
                 val groupName = StringArgumentType.getString(ctx, "group_name")
 
-                if (PermissionManager.setPlayerGroup(player.uuid, groupName)) {
-                    player.refreshTabListName()
-                    player.refreshDisplayName()
+                if (PermissionManager.storage.groups.containsKey(groupName.lowercase())) {
+                    PermissionManager.setPlayerGroup(player.uuid, groupName)
+                    TabHandler.updatePlayerTab(player)
                     ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.join.success", groupName)) }, false)
                 } else {
                     ctx.source.sendFailure(Component.literal(LanguageUtils.tr(ctx.source, "msg.join.fail", groupName)))
@@ -95,9 +89,54 @@ object InsigniaCommands {
         rootNode.then(Commands.literal("вступить").requires { isRussian(it) }.then(joinAction))
         rootNode.then(Commands.literal("join").requires { isEnglish(it) }.then(joinAction))
 
-        // ---------------------------------------------------------------------
-        // 3. ПОКАЗ / DISPLAY
-        // ---------------------------------------------------------------------
+        // 3. ВЫЙТИ ИЗ ГРУППЫ ИЛИ СБРОСИТЬ ПРЕФИКС / LEAVE
+        rootNode.then(
+            Commands.literal("выйти")
+                .requires { isRussian(it) }
+                .then(
+                    Commands.literal("группа").executes { ctx ->
+                        val player = ctx.source.playerOrException
+                        PermissionManager.removePlayerGroup(player.uuid)
+                        TabHandler.updatePlayerTab(player)
+                        ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.leave.group.success")) }, false)
+                        1
+                    }
+                )
+                .then(
+                    Commands.literal("префикс").executes { ctx ->
+                        val player = ctx.source.playerOrException
+                        PermissionManager.removePlayerPrefix(player.uuid)
+                        TabHandler.updatePlayerTab(player)
+                        ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.leave.prefix.success")) }, false)
+                        1
+                    }
+                )
+        )
+
+        rootNode.then(
+            Commands.literal("leave")
+                .requires { isEnglish(it) }
+                .then(
+                    Commands.literal("group").executes { ctx ->
+                        val player = ctx.source.playerOrException
+                        PermissionManager.removePlayerGroup(player.uuid)
+                        TabHandler.updatePlayerTab(player)
+                        ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.leave.group.success")) }, false)
+                        1
+                    }
+                )
+                .then(
+                    Commands.literal("prefix").executes { ctx ->
+                        val player = ctx.source.playerOrException
+                        PermissionManager.removePlayerPrefix(player.uuid)
+                        TabHandler.updatePlayerTab(player)
+                        ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.leave.prefix.success")) }, false)
+                        1
+                    }
+                )
+        )
+
+        // 4. ПОКАЗ / DISPLAY
         rootNode.then(
             Commands.literal("показ")
                 .requires { isRussian(it) }
@@ -132,9 +171,7 @@ object InsigniaCommands {
                 )
         )
 
-        // ---------------------------------------------------------------------
-        // 4. СОЗДАТЬ / CREATE (АДМИН)
-        // ---------------------------------------------------------------------
+        // 5. СОЗДАТЬ / CREATE (АДМИН)
         val createGroupNode = Commands.argument("name", StringArgumentType.word())
             .then(
                 Commands.argument("color", StringArgumentType.word())
@@ -144,6 +181,8 @@ object InsigniaCommands {
                         val color = StringArgumentType.getString(ctx, "color")
 
                         PermissionManager.createGroup(name, color)
+                        TabHandler.updateAllPlayers(ctx.source.server)
+
                         val group = PermissionManager.storage.groups[name.lowercase()]
 
                         ctx.source.sendSuccess(
@@ -169,6 +208,8 @@ object InsigniaCommands {
                                 val text = StringArgumentType.getString(ctx, "text")
 
                                 PermissionManager.createPrefix(name, color, text)
+                                TabHandler.updateAllPlayers(ctx.source.server)
+
                                 val prefix = PermissionManager.storage.prefixes[name.lowercase()]
 
                                 ctx.source.sendSuccess(
@@ -197,25 +238,95 @@ object InsigniaCommands {
                 .then(Commands.literal("prefix").then(createPrefixNode))
         )
 
-        // ---------------------------------------------------------------------
-        // 5. ИГРОК / USER (АДМИН)
-        // ---------------------------------------------------------------------
-        val userAction = Commands.argument("target", EntityArgument.player())
+        // 6. ИГРОК / USER (АДМИН - ВЫДАЧА И СБРОС)
+        val userActionRu = Commands.argument("target", EntityArgument.player())
+            .then(
+                Commands.literal("группа")
+                    .then(
+                        Commands.argument("group_text", StringArgumentType.greedyString())
+                            .executes { ctx ->
+                                val target = EntityArgument.getPlayer(ctx, "target")
+                                val groupText = StringArgumentType.getString(ctx, "group_text")
+
+                                PermissionManager.setPlayerGroup(target.uuid, groupText)
+                                TabHandler.updatePlayerTab(target)
+
+                                val formatted = ColorUtils.parseColor(groupText)
+                                ctx.source.sendSuccess(
+                                    {
+                                        Component.literal(LanguageUtils.tr(ctx.source, "msg.user.setgroup.success", target.name.string))
+                                            .append(formatted)
+                                    },
+                                    true
+                                )
+                                1
+                            }
+                    )
+            )
+            .then(
+                Commands.literal("префикс")
+                    .then(
+                        Commands.argument("prefix_text", StringArgumentType.greedyString())
+                            .executes { ctx ->
+                                val target = EntityArgument.getPlayer(ctx, "target")
+                                val prefixText = StringArgumentType.getString(ctx, "prefix_text")
+
+                                PermissionManager.setPlayerPrefix(target.uuid, prefixText)
+                                TabHandler.updatePlayerTab(target)
+
+                                val formatted = ColorUtils.parseColor(prefixText)
+                                ctx.source.sendSuccess(
+                                    {
+                                        Component.literal(LanguageUtils.tr(ctx.source, "msg.user.setprefix.success", target.name.string))
+                                            .append(formatted)
+                                    },
+                                    true
+                                )
+                                1
+                            }
+                    )
+            )
+            .then(
+                Commands.literal("сброситьгруппу")
+                    .executes { ctx ->
+                        val target = EntityArgument.getPlayer(ctx, "target")
+                        PermissionManager.removePlayerGroup(target.uuid)
+                        TabHandler.updatePlayerTab(target)
+                        ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.user.removegroup.success", target.name.string)) }, true)
+                        1
+                    }
+            )
+            .then(
+                Commands.literal("сброситьпрефикс")
+                    .executes { ctx ->
+                        val target = EntityArgument.getPlayer(ctx, "target")
+                        PermissionManager.removePlayerPrefix(target.uuid)
+                        TabHandler.updatePlayerTab(target)
+                        ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.user.removeprefix.success", target.name.string)) }, true)
+                        1
+                    }
+            )
+
+        val userActionEn = Commands.argument("target", EntityArgument.player())
             .then(
                 Commands.literal("setgroup")
                     .then(
-                        Commands.argument("group_name", StringArgumentType.word())
+                        Commands.argument("group_text", StringArgumentType.greedyString())
                             .executes { ctx ->
                                 val target = EntityArgument.getPlayer(ctx, "target")
-                                val groupName = StringArgumentType.getString(ctx, "group_name")
+                                val groupText = StringArgumentType.getString(ctx, "group_text")
 
-                                if (PermissionManager.setPlayerGroup(target.uuid, groupName)) {
-                                    target.refreshTabListName()
-                                    target.refreshDisplayName()
-                                    ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.user.setgroup.success", groupName, target.name.string)) }, true)
-                                } else {
-                                    ctx.source.sendFailure(Component.literal(LanguageUtils.tr(ctx.source, "msg.user.setgroup.fail")))
-                                }
+                                PermissionManager.setPlayerGroup(target.uuid, groupText)
+                                TabHandler.updatePlayerTab(target)
+
+                                val formatted = ColorUtils.parseColor(groupText)
+                                ctx.source.sendSuccess(
+                                    {
+                                        Component.literal(LanguageUtils.tr(ctx.source, "msg.user.setgroup.success", target.name.string))
+                                            .append(formatted)
+                                    },
+                                    true
+                                )
                                 1
                             }
                     )
@@ -223,25 +334,70 @@ object InsigniaCommands {
             .then(
                 Commands.literal("setprefix")
                     .then(
-                        Commands.argument("prefix_name", StringArgumentType.word())
+                        Commands.argument("prefix_text", StringArgumentType.greedyString())
                             .executes { ctx ->
                                 val target = EntityArgument.getPlayer(ctx, "target")
-                                val prefixName = StringArgumentType.getString(ctx, "prefix_name")
+                                val prefixText = StringArgumentType.getString(ctx, "prefix_text")
 
-                                if (PermissionManager.setPlayerPrefix(target.uuid, prefixName)) {
-                                    target.refreshTabListName()
-                                    target.refreshDisplayName()
-                                    ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.user.setprefix.success", prefixName, target.name.string)) }, true)
-                                } else {
-                                    ctx.source.sendFailure(Component.literal(LanguageUtils.tr(ctx.source, "msg.user.setprefix.fail")))
-                                }
+                                PermissionManager.setPlayerPrefix(target.uuid, prefixText)
+                                TabHandler.updatePlayerTab(target)
+
+                                val formatted = ColorUtils.parseColor(prefixText)
+                                ctx.source.sendSuccess(
+                                    {
+                                        Component.literal(LanguageUtils.tr(ctx.source, "msg.user.setprefix.success", target.name.string))
+                                            .append(formatted)
+                                    },
+                                    true
+                                )
                                 1
                             }
                     )
             )
+            .then(
+                Commands.literal("removegroup")
+                    .executes { ctx ->
+                        val target = EntityArgument.getPlayer(ctx, "target")
+                        PermissionManager.removePlayerGroup(target.uuid)
+                        TabHandler.updatePlayerTab(target)
+                        ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.user.removegroup.success", target.name.string)) }, true)
+                        1
+                    }
+            )
+            .then(
+                Commands.literal("removeprefix")
+                    .executes { ctx ->
+                        val target = EntityArgument.getPlayer(ctx, "target")
+                        PermissionManager.removePlayerPrefix(target.uuid)
+                        TabHandler.updatePlayerTab(target)
+                        ctx.source.sendSuccess({ Component.literal(LanguageUtils.tr(ctx.source, "msg.user.removeprefix.success", target.name.string)) }, true)
+                        1
+                    }
+            )
 
-        rootNode.then(Commands.literal("игрок").requires { it.hasPermission(4) && isRussian(it) }.then(userAction))
-        rootNode.then(Commands.literal("user").requires { it.hasPermission(4) && isEnglish(it) }.then(userAction))
+        rootNode.then(Commands.literal("игрок").requires { it.hasPermission(4) && isRussian(it) }.then(userActionRu))
+        rootNode.then(Commands.literal("user").requires { it.hasPermission(4) && isEnglish(it) }.then(userActionEn))
+
+        // 7. ИМЯ СЕРВЕРА / SERVERNAME (АДМИН)
+        val serverNameNode = Commands.argument("text", StringArgumentType.greedyString())
+            .executes { ctx ->
+                val text = StringArgumentType.getString(ctx, "text")
+                PermissionManager.setServerName(text)
+                TabHandler.updateAllPlayers(ctx.source.server)
+
+                val formatted = ColorUtils.parseColor(text)
+                ctx.source.sendSuccess(
+                    {
+                        Component.literal(LanguageUtils.tr(ctx.source, "msg.servername.success"))
+                            .append(formatted)
+                    },
+                    true
+                )
+                1
+            }
+
+        rootNode.then(Commands.literal("имясервера").requires { it.hasPermission(4) && isRussian(it) }.then(serverNameNode))
+        rootNode.then(Commands.literal("servername").requires { it.hasPermission(4) && isEnglish(it) }.then(serverNameNode))
 
         dispatcher.register(rootNode)
     }
@@ -251,6 +407,7 @@ object InsigniaCommands {
             "player", "игрок" -> {
                 source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.header.player")) }, false)
                 source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.join")) }, false)
+                source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.leave")) }, false)
                 source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.display")) }, false)
             }
             "admin", "админ" -> {
@@ -259,6 +416,9 @@ object InsigniaCommands {
                 source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.create_prefix")) }, false)
                 source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.user_setgroup")) }, false)
                 source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.user_setprefix")) }, false)
+                source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.user_removegroup")) }, false)
+                source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.user_removeprefix")) }, false)
+                source.sendSuccess({ Component.literal(LanguageUtils.tr(source, "help.cmd.servername")) }, false)
             }
             else -> {
                 source.sendFailure(Component.literal(LanguageUtils.tr(source, "help.invalid_type")))
