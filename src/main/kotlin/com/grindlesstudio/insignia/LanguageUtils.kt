@@ -1,6 +1,7 @@
 package com.grindlesstudio.insignia
 
 import net.minecraft.commands.CommandSourceStack
+import java.util.Locale
 
 object LanguageUtils {
 
@@ -16,7 +17,7 @@ object LanguageUtils {
         "help.cmd.user_setprefix" to "§e/insignia игрок <игрок> префикс <текст> §7- Выдать префикс игроку",
         "help.cmd.user_removegroup" to "§e/insignia игрок <игрок> сброситьгруппу §7- Забрать группу у игрока",
         "help.cmd.user_removeprefix" to "§e/insignia игрок <игрок> сброситьпрефикс §7- Забрать префикс у игрока",
-        "help.cmd.servername" to "§e/insignia имясервера <текст> §7- Изменить название сервера в Табе",
+        "help.cmd.servername" to "§e/insignia имясервера <текст> §7- Изменить название сервера в таб-листе",
         "help.invalid_type" to "§cИспользуйте: /insignia справка <игрок|админ>",
 
         "msg.join.success" to "§a[Insignia] Вы вступили в группу '%s'",
@@ -45,23 +46,23 @@ object LanguageUtils {
     private val en = mapOf(
         "help.header.player" to "§a=== Insignia Commands (Player) ===",
         "help.header.admin" to "§c=== Insignia Commands (Admin) ===",
-        "help.cmd.join" to "§e/insignia join <group> §7- Join group",
-        "help.cmd.leave" to "§e/insignia leave <group|prefix> §7- Leave group or remove prefix",
+        "help.cmd.join" to "§e/insignia join <group> §7- Join a group",
+        "help.cmd.leave" to "§e/insignia leave <group|prefix> §7- Leave a group or remove a prefix",
         "help.cmd.display" to "§e/insignia display <chat|tab> <prefix|group|none> §7- Set display mode",
         "help.cmd.create_group" to "§e/insignia create group <name> <color> §7- Create a group",
         "help.cmd.create_prefix" to "§e/insignia create prefix <name> <color> <text> §7- Create a prefix",
-        "help.cmd.user_setgroup" to "§e/insignia user <player> setgroup <group> §7- Set player group",
-        "help.cmd.user_setprefix" to "§e/insignia user <player> setprefix <text> §7- Set player prefix",
-        "help.cmd.user_removegroup" to "§e/insignia user <player> removegroup §7- Remove group from player",
-        "help.cmd.user_removeprefix" to "§e/insignia user <player> removeprefix §7- Remove prefix from player",
-        "help.cmd.servername" to "§e/insignia servername <text> §7- Change server name in Tab",
+        "help.cmd.user_setgroup" to "§e/insignia user <player> setgroup <group> §7- Set a player's group",
+        "help.cmd.user_setprefix" to "§e/insignia user <player> setprefix <text> §7- Set a player's prefix",
+        "help.cmd.user_removegroup" to "§e/insignia user <player> removegroup §7- Remove a player's group",
+        "help.cmd.user_removeprefix" to "§e/insignia user <player> removeprefix §7- Remove a player's prefix",
+        "help.cmd.servername" to "§e/insignia servername <text> §7- Change the server name in the tab list",
         "help.invalid_type" to "§cUse: /insignia help <player|admin>",
 
         "msg.join.success" to "§a[Insignia] You joined group '%s'",
         "msg.join.fail" to "§c[Insignia] Group '%s' not found!",
         "msg.leave.group.success" to "§a[Insignia] You left the group",
         "msg.leave.prefix.success" to "§a[Insignia] You removed your prefix",
-        "msg.display.success" to "§a[Insignia] '%s' slot now displays: %s",
+        "msg.display.success" to "§a[Insignia] The '%s' slot now displays: %s",
         "msg.display.invalid" to "§cAvailable modes: prefix, group, none",
 
         "msg.create_group.success" to "§a[Insignia] Group '%s' created: ",
@@ -77,41 +78,69 @@ object LanguageUtils {
         "slot.tab" to "Tab",
         "mode.prefix" to "Prefix",
         "mode.group" to "Group",
-        "mode.none" to "None"
+        "mode.none" to "Disabled"
     )
 
+    /**
+     * Возвращает язык игрока.
+     * Для консоли и при ошибке используется русский.
+     */
     fun getLanguage(source: CommandSourceStack): String {
         val player = source.player ?: return "ru_ru"
+
         return try {
-            player.clientInformation().language().lowercase()
-        } catch (e: Exception) {
+            player.clientInformation()
+                .language()
+                .lowercase(Locale.ROOT)
+        } catch (_: Exception) {
             "ru_ru"
         }
     }
 
-    fun tr(source: CommandSourceStack, key: String, vararg args: Any): String {
-        val lang = getLanguage(source)
-        val dict = if (lang.startsWith("ru")) ru else en
-        val template = dict[key] ?: en[key] ?: key
-        return if (args.isNotEmpty()) String.format(template, *args) else template
+    /**
+     * Возвращает переведённую строку.
+     * Неизвестный ключ отображается как есть.
+     */
+    fun tr(
+        source: CommandSourceStack,
+        key: String,
+        vararg args: Any
+    ): String {
+        val language = getLanguage(source)
+        val dictionary = if (language.startsWith("ru")) ru else en
+        val template = dictionary[key] ?: en[key] ?: key
+
+        return if (args.isNotEmpty()) {
+            String.format(Locale.ROOT, template, *args)
+        } else {
+            template
+        }
     }
 
-    fun getSlotName(source: CommandSourceStack, slot: String): String {
-        val normalized = when (slot.lowercase()) {
+    fun getSlotName(
+        source: CommandSourceStack,
+        slot: String
+    ): String {
+        val normalized = when (slot.lowercase(Locale.ROOT)) {
             "чат", "chat" -> "chat"
             "таб", "tab" -> "tab"
-            else -> slot.lowercase()
+            else -> slot.lowercase(Locale.ROOT)
         }
+
         return tr(source, "slot.$normalized")
     }
 
-    fun getModeName(source: CommandSourceStack, mode: String): String {
-        val normalized = when (mode.lowercase()) {
+    fun getModeName(
+        source: CommandSourceStack,
+        mode: String
+    ): String {
+        val normalized = when (mode.lowercase(Locale.ROOT)) {
             "префикс", "prefix" -> "prefix"
             "группа", "group" -> "group"
             "выкл", "none", "ничего" -> "none"
-            else -> mode.lowercase()
+            else -> mode.lowercase(Locale.ROOT)
         }
+
         return tr(source, "mode.$normalized")
     }
 }

@@ -1,25 +1,98 @@
+# Insignia
 
-Installation information
-=======
+**Insignia** — мод для Minecraft 1.21.1 на NeoForge, позволяющий управлять группами и префиксами игроков.
 
-This template repository can be directly cloned to get you started with a new
-mod. Simply create a new repository cloned from this one, by following the
-instructions provided by [GitHub](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
+## Возможности
 
-Once you have your clone, simply open the repository in the IDE of your choice. The usual recommendation for an IDE is either IntelliJ IDEA or Eclipse.
+- Создание шаблонов групп и префиксов.
+- Назначение игрокам групп и персональных тегов.
+- Настройка отображения префикса или группы отдельно для чата и таб-листа.
+- Отключение отображения тегов.
+- Настройка названия сервера в таб-листе.
+- Русские и английские команды.
+- Сохранение настроек в `config/insignia.json`.
 
-If at any point you are missing libraries in your IDE, or you've run into problems you can
-run `gradlew --refresh-dependencies` to refresh the local cache. `gradlew clean` to reset everything 
-{this does not affect your code} and then start the process again.
+## Требования
 
-Mapping Names:
-============
-By default, the MDK is configured to use the official mapping names from Mojang for methods and fields 
-in the Minecraft codebase. These names are covered by a specific license. All modders should be aware of this
-license. For the latest license text, refer to the mapping file itself, or the reference copy here:
-https://github.com/NeoForged/NeoForm/blob/main/Mojang.md
+- Minecraft 1.21.1
+- NeoForge 21.1.256 или совместимая версия в рамках настроек проекта
+- Java 21
+- KotlinForForge — если библиотека не включена в используемую сборку мода
 
-Additional Resources: 
-==========
-Community Documentation: https://docs.neoforged.net/  
-NeoForged Discord: https://discord.neoforged.net/
+## Установка
+
+1. Установи Minecraft 1.21.1 и подходящую версию NeoForge.
+2. Установи необходимые зависимости мода.
+3. Помести файл Insignia в каталог `mods`.
+4. Запусти игру или сервер.
+5. После первого запуска проверь конфигурацию `config/insignia.json`.
+
+## Команды игроков
+
+| Команда | Назначение |
+|---|---|
+| `/insignia join <group>` | Вступить в существующую группу |
+| `/insignia leave group` | Удалить свою группу |
+| `/insignia leave prefix` | Удалить свой префикс |
+| `/insignia display chat prefix` | Показывать префикс в чате |
+| `/insignia display chat group` | Показывать группу в чате |
+| `/insignia display chat none` | Отключить тег в чате |
+| `/insignia display tab prefix` | Показывать префикс в таб-листе |
+| `/insignia display tab group` | Показывать группу в таб-листе |
+| `/insignia display tab none` | Отключить тег в таб-листе |
+| `/insignia help` | Показать справку |
+
+Русские варианты команд доступны при соответствующем языке клиента.
+
+## Команды администратора
+
+Для административных команд необходим уровень прав оператора 4.
+
+| Команда | Назначение |
+|---|---|
+| `/insignia create group <name> <color>` | Создать группу |
+| `/insignia create prefix <name> <color> <text>` | Создать шаблон префикса |
+| `/insignia user <player> setgroup <text>` | Назначить группу или личный тег |
+| `/insignia user <player> setprefix <text>` | Назначить префикс |
+| `/insignia user <player> removegroup` | Удалить группу игрока |
+| `/insignia user <player> removeprefix` | Удалить префикс игрока |
+| `/insignia servername <text>` | Изменить название сервера |
+
+Для получения полного списка используй `/insignia help player` или `/insignia help admin`.
+
+## Цвета
+
+Цвет можно задавать названием на русском или английском языке либо стандартным кодом Minecraft, например:
+
+- `red` или `красный`
+- `blue` или `синий`
+- `green` или `зелёный`
+- `&c`, `&9`, `&a`
+
+Поддерживаются стандартные цветовые коды и коды форматирования текста Minecraft.
+
+## Конфигурация
+
+Основные данные хранятся в `config/insignia.json`. Перед ручным редактированием рекомендуется сделать резервную копию.
+
+## Сборка из исходников
+
+Для сборки необходим JDK 21.
+
+Windows:
+
+```powershell
+.\gradlew.bat build
+```
+
+Linux/macOS:
+
+```bash
+./gradlew build
+```
+
+Готовые артефакты появятся в каталоге `build/libs` соответствующего модуля Gradle.
+
+## Лицензия
+
+См. лицензию, указанную в `gradle.properties`.

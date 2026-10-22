@@ -1,7 +1,6 @@
 package com.grindlesstudio.insignia
 
 import net.minecraft.network.chat.Component
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerPlayer
 import net.neoforged.bus.api.SubscribeEvent
@@ -17,101 +16,158 @@ object TabHandler {
 
     private var tickCounter = 0
 
-    @JvmStatic
+    private val dateFormatter =
+        DateTimeFormatter.ofPattern("dd.MM.yyyy")
+
+    /**
+     * Обновляем информацию игрока после входа.
+     */
     @SubscribeEvent
+    @JvmStatic
     fun onPlayerLoggedIn(event: PlayerEvent.PlayerLoggedInEvent) {
         val player = event.entity as? ServerPlayer ?: return
+
         updateHeaderFooter(player)
         updatePlayerTab(player)
     }
 
-    @JvmStatic
+    /**
+     * Формируем имя игрока в таб-листе.
+     */
     @SubscribeEvent
+    @JvmStatic
     fun onTabListNameFormat(event: PlayerEvent.TabListNameFormat) {
         val player = event.entity as? ServerPlayer ?: return
-        val tagComponent = PermissionManager.getFormattedTag(player.uuid, isChat = false)
+
+        val tag = PermissionManager.getFormattedTag(
+            player.uuid,
+            isChat = false
+        )
 
         event.displayName = Component.empty()
-            .append(tagComponent)
+            .append(tag)
             .append(player.name)
     }
 
-    @JvmStatic
+    /**
+     * Форматируем сообщения чата.
+     *
+     * Пока сохраняем прежнюю схему обработки, чтобы не менять
+     * поведение чата без проверки API конкретной версии NeoForge.
+     */
     @SubscribeEvent
+    @JvmStatic
     fun onServerChat(event: ServerChatEvent) {
         val player = event.player
-        val tagComponent = PermissionManager.getFormattedTag(player.uuid, isChat = true)
+
+        val tag = PermissionManager.getFormattedTag(
+            player.uuid,
+            isChat = true
+        )
 
         val formattedMessage = Component.empty()
-            .append(tagComponent)
+            .append(tag)
             .append(player.name)
-            .append("§f: ")
+            .append(Component.literal("§f: "))
             .append(event.message)
 
-        player.server.playerList.broadcastSystemMessage(formattedMessage, false)
+        player.server.playerList.broadcastSystemMessage(
+            formattedMessage,
+            false
+        )
+
         event.isCanceled = true
     }
 
-    @JvmStatic
+    /**
+     * Обновляем заголовок и подвал раз в секунду.
+     */
     @SubscribeEvent
+    @JvmStatic
     fun onServerTick(event: ServerTickEvent.Post) {
         tickCounter++
+
         if (tickCounter < 20) return
         tickCounter = 0
 
-        val server = event.server
-        server.playerList.players.forEach { updateHeaderFooter(it) }
+        event.server.playerList.players.forEach { player ->
+            updateHeaderFooter(player)
+        }
     }
 
+    /**
+     * Обновляет заголовок и подвал таб-листа конкретного игрока.
+     */
     private fun updateHeaderFooter(player: ServerPlayer) {
         val server = player.server
-        val onlinePlayers = server.playerList.playerCount
-        val onlineStaff = server.playerList.players.count { it.hasPermissions(4) }
-        val currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+        val playerList = server.playerList
+
+        val onlinePlayers = playerList.playerCount
+        val onlineStaff = playerList.players.count {
+            it.hasPermissions(4)
+        }
+
+        val currentDate = LocalDate.now().format(dateFormatter)
 
         val runtime = Runtime.getRuntime()
-        val usedMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
-        val maxMem = runtime.maxMemory() / (1024 * 1024)
+        val usedMemory =
+            (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
+        val maxMemory =
+            runtime.maxMemory() / (1024 * 1024)
+
         val ping = player.connection.latency()
 
-        // Преобразуем цветовые коды & в § для названия сервера
-        val serverNameFormatted = PermissionManager.storage.serverName.replace("&", "§")
-
-        val headerText = """
-            $serverNameFormatted
-            §7>> §bWelcome, §3${player.name.string}§b! §7<<
-            §eOnline players: §f$onlinePlayers
-            §eOnline staff: §f$onlineStaff
-        """.trimIndent()
-
-        val footerText = """
-            §8- §f${player.name.string} §7Ping: §a$ping
-            §7Date §a$currentDate
-            §aPing: $ping
-            §7Used memory: §a$usedMem MB §7/ §a$maxMem MB
-        """.trimIndent()
-
-        player.setTabListHeaderFooter(
-            Component.literal(headerText),
-            Component.literal(footerText)
+        val serverName = ColorUtils.parseColor(
+            PermissionManager.storage.serverName
         )
+
+        val header = Component.empty()
+            .append(serverName)
+            .append(Component.literal("\n"))
+            .append(
+                Component.literal(
+                    "§7>> §bWelcome, §3${player.name.string}§b! §7<<"
+                )
+            )
+            .append(Component.literal("\n"))
+            .append(
+                Component.literal(
+                    "§eOnline players: §f$onlinePlayers"
+                )
+            )
+            .append(Component.literal("\n"))
+            .append(
+                Component.literal(
+                    "§eOnline staff: §f$onlineStaff"
+                )
+            )
+
+        val footer = Component.literal(
+            """
+            §8- §f${player.name.string} §7Ping: §a$ping ms
+            §7Date: §a$currentDate
+            §7Used memory: §a$usedMemory MB §7/ §a$maxMemory MB
+            """.trimIndent()
+        )
+
+        player.setTabListHeaderFooter(header, footer)
     }
 
+    /**
+     * Обновляет имя игрока в таб-листе.
+     */
     fun updatePlayerTab(player: ServerPlayer) {
         player.refreshTabListName()
         player.refreshDisplayName()
-
-        val packet = ClientboundPlayerInfoUpdatePacket(
-            ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME,
-            player
-        )
-        player.server.playerList.broadcastAll(packet)
     }
 
+    /**
+     * Обновляет таб-лист и заголовок/подвал для всех игроков.
+     */
     fun updateAllPlayers(server: MinecraftServer) {
-        server.playerList.players.forEach {
-            updateHeaderFooter(it)
-            updatePlayerTab(it)
+        server.playerList.players.forEach { player ->
+            updateHeaderFooter(player)
+            updatePlayerTab(player)
         }
     }
 }
