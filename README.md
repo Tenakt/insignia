@@ -1,83 +1,92 @@
 # Insignia
 
-**Insignia** — мод для Minecraft 1.21.1 на NeoForge, позволяющий управлять группами и префиксами игроков.
+**Insignia** is a lightweight server-focused group and prefix management utility for Minecraft 1.21.1 (NeoForge). It lets server owners organize players with groups and custom prefixes, and control how those tags appear in chat and the player list.
 
-## Возможности
+## Features
 
-- Создание шаблонов групп и префиксов.
-- Назначение игрокам групп и персональных тегов.
-- Настройка отображения префикса или группы отдельно для чата и таб-листа.
-- Отключение отображения тегов.
-- Настройка названия сервера в таб-листе.
-- Русские и английские команды.
-- Сохранение настроек в `config/insignia.json`.
+- **Groups and prefixes** — create reusable group and prefix templates.
+- **Player-specific tags** — assign a template or a custom group/prefix to an individual player.
+- **Independent display settings** — choose what appears in chat and in the player list separately.
+- **Player control** — let players join available groups, remove their own tags, and choose their preferred display mode.
+- **Custom player-list header** — set a server title and show server/player information.
+- **Bilingual commands** — Russian and English command trees are selected using the command user's client language.
+- **Persistent data** — groups, prefixes, player settings, and the server title are stored in `config/insignia.json`.
 
-## Требования
+## Compatibility
 
-- Minecraft 1.21.1
-- NeoForge 21.1.256 или совместимая версия в рамках настроек проекта
-- Java 21
-- KotlinForForge — если библиотека не включена в используемую сборку мода
-
-## Установка
-
-1. Установи Minecraft 1.21.1 и подходящую версию NeoForge.
-2. Установи необходимые зависимости мода.
-3. Помести файл Insignia в каталог `mods`.
-4. Запусти игру или сервер.
-5. После первого запуска проверь конфигурацию `config/insignia.json`.
-
-## Команды игроков
-
-| Команда | Назначение |
+| Component | Version |
 |---|---|
-| `/insignia join <group>` | Вступить в существующую группу |
-| `/insignia leave group` | Удалить свою группу |
-| `/insignia leave prefix` | Удалить свой префикс |
-| `/insignia display chat prefix` | Показывать префикс в чате |
-| `/insignia display chat group` | Показывать группу в чате |
-| `/insignia display chat none` | Отключить тег в чате |
-| `/insignia display tab prefix` | Показывать префикс в таб-листе |
-| `/insignia display tab group` | Показывать группу в таб-листе |
-| `/insignia display tab none` | Отключить тег в таб-листе |
-| `/insignia help` | Показать справку |
+| Minecraft | 1.21.1 |
+| NeoForge | 21.1.256 |
+| Java | 21 |
+| KotlinForForge | 5.12.0 |
 
-Русские варианты команд доступны при соответствующем языке клиента.
+Insignia is built for NeoForge. It is not a Fabric or Forge build.
 
-## Команды администратора
+## Installation
 
-Для административных команд необходим уровень прав оператора 4.
+1. Install Minecraft 1.21.1 with NeoForge 21.1.256.
+2. Install the required **Kotlin for Forge / NeoForge** dependency (5.12.0 or a compatible version).
+3. Put the Insignia JAR and its required dependency into your `mods` folder.
+4. Start the server. Insignia creates `config/insignia.json` on first launch.
 
-| Команда | Назначение |
+**Server note:** Insignia's features are implemented on the server. Players connect using the normal Minecraft client for the server's modded environment; install the required mod dependencies wherever NeoForge requires them.
+
+## Commands
+
+Commands are localized according to the language of the player executing them. The examples below use English command names. Use `/insignia help` or `/insignia help admin` for in-game help.
+
+### Player commands
+
+| Command | Description |
 |---|---|
-| `/insignia create group <name> <color>` | Создать группу |
-| `/insignia create prefix <name> <color> <text>` | Создать шаблон префикса |
-| `/insignia user <player> setgroup <text>` | Назначить группу или личный тег |
-| `/insignia user <player> setprefix <text>` | Назначить префикс |
-| `/insignia user <player> removegroup` | Удалить группу игрока |
-| `/insignia user <player> removeprefix` | Удалить префикс игрока |
-| `/insignia servername <text>` | Изменить название сервера |
+| `/insignia join <group>` | Join an existing group |
+| `/insignia leave group` | Remove your group |
+| `/insignia leave prefix` | Remove your prefix |
+| `/insignia display chat prefix` | Show your prefix in chat |
+| `/insignia display chat group` | Show your group in chat |
+| `/insignia display chat none` | Hide your tag in chat |
+| `/insignia display tab prefix` | Show your prefix in the player list |
+| `/insignia display tab group` | Show your group in the player list |
+| `/insignia display tab none` | Hide your tag in the player list |
+| `/insignia help` | Show player help |
 
-Для получения полного списка используй `/insignia help player` или `/insignia help admin`.
+### Administrator commands
 
-## Цвета
+Administrative commands require **operator permission level 4**.
 
-Цвет можно задавать названием на русском или английском языке либо стандартным кодом Minecraft, например:
+| Command | Description |
+|---|---|
+| `/insignia create group <name> <color>` | Create a group template |
+| `/insignia create prefix <name> <color> <text>` | Create a prefix template |
+| `/insignia user <player> setgroup <text>` | Assign a group template or custom group text |
+| `/insignia user <player> setprefix <text>` | Assign a prefix template or custom prefix text |
+| `/insignia user <player> removegroup` | Remove a player's group |
+| `/insignia user <player> removeprefix` | Remove a player's prefix |
+| `/insignia servername <text>` | Change the player-list server title |
+| `/insignia help admin` | Show administrator help |
 
-- `red` или `красный`
-- `blue` или `синий`
-- `green` или `зелёный`
-- `&c`, `&9`, `&a`
+### Colors and formatting
 
-Поддерживаются стандартные цветовые коды и коды форматирования текста Minecraft.
+Group and prefix templates accept color names in English or Russian, as well as Minecraft formatting codes.
 
-## Конфигурация
+Examples: `red`, `blue`, `green`, `красный`, `синий`, `зелёный`, `&c`, `&9`, `&a`.
 
-Основные данные хранятся в `config/insignia.json`. Перед ручным редактированием рекомендуется сделать резервную копию.
+Standard Minecraft color and text-formatting codes are supported.
 
-## Сборка из исходников
+## Configuration and data
 
-Для сборки необходим JDK 21.
+Insignia stores its data in:
+
+```text
+config/insignia.json
+```
+
+The file contains group templates, prefix templates, player assignments/display preferences, and the player-list server title. Stop the server and make a backup before editing it manually.
+
+## Building from source
+
+Requirements: JDK 21.
 
 Windows:
 
@@ -91,8 +100,8 @@ Linux/macOS:
 ./gradlew build
 ```
 
-Готовые артефакты появятся в каталоге `build/libs` соответствующего модуля Gradle.
+The compiled JAR is generated in `build/libs`.
 
-## Лицензия
+## License
 
-См. лицензию, указанную в `gradle.properties`.
+Insignia is distributed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE).
