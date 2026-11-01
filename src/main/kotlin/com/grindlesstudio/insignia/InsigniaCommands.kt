@@ -11,6 +11,7 @@ import net.minecraft.network.chat.MutableComponent
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.RegisterCommandsEvent
+import java.util.Locale
 
 @EventBusSubscriber(modid = Insignia.MOD_ID)
 object InsigniaCommands {
@@ -141,7 +142,7 @@ object InsigniaCommands {
             .executes { ctx ->
                 val player = ctx.source.playerOrException
                 val name = StringArgumentType.getString(ctx, "group_name")
-                    .lowercase()
+                    .lowercase(Locale.ROOT)
 
                 if (name !in PermissionManager.storage.groups) {
                     ctx.source.sendFailure(
@@ -363,7 +364,7 @@ object InsigniaCommands {
                                                     return@executes 0
                                                 }
 
-                                                val key = name.lowercase()
+                                                val key = name.lowercase(Locale.ROOT)
 
                                                 if (key in PermissionManager.storage.groups) {
                                                     ctx.source.sendFailure(
@@ -469,7 +470,7 @@ object InsigniaCommands {
                                                             return@executes 0
                                                         }
 
-                                                        val key = name.lowercase()
+                                                        val key = name.lowercase(Locale.ROOT)
 
                                                         if (key in PermissionManager.storage.prefixes) {
                                                             ctx.source.sendFailure(
