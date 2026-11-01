@@ -10,14 +10,14 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.tick.ServerTickEvent
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlin.math.min
 
 @EventBusSubscriber(modid = Insignia.MOD_ID)
 object TabHandler {
 
     private var tickCounter = 0
 
-    private val dateFormatter =
-        DateTimeFormatter.ofPattern("dd.MM.yyyy")
+    private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
     /**
      * Обновляем информацию игрока после входа.
@@ -51,9 +51,6 @@ object TabHandler {
 
     /**
      * Форматируем сообщения чата.
-     *
-     * Пока сохраняем прежнюю схему обработки, чтобы не менять
-     * поведение чата без проверки API конкретной версии NeoForge.
      */
     @SubscribeEvent
     @JvmStatic
@@ -80,7 +77,7 @@ object TabHandler {
     }
 
     /**
-     * Обновляем заголовок и подвал раз в секунду.
+     * Обновляем заголовок и подвал раз в секунду (20 тиков).
      */
     @SubscribeEvent
     @JvmStatic
@@ -109,11 +106,18 @@ object TabHandler {
 
         val currentDate = LocalDate.now().format(dateFormatter)
 
+        // Исправленный расчет ОЗУ
         val runtime = Runtime.getRuntime()
-        val usedMemory =
-            (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
-        val maxMemory =
-            runtime.maxMemory() / (1024 * 1024)
+        val usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
+        val maxMemory = runtime.maxMemory() / (1024 * 1024)
+
+        // Расчет TPS и MSPT (время тика в миллисекундах)
+        val mspt = server.averageTickTimeNanos / 1_000_000.0
+        val calculatedTps = if (mspt > 0) 1000.0 / mspt else 20.0
+        val tps = min(20.0, calculatedTps)
+
+        val tpsFormatted = String.format("%.1f", tps)
+        val msptFormatted = String.format("%.1f", mspt)
 
         val ping = player.connection.latency()
 
@@ -145,6 +149,7 @@ object TabHandler {
         val footer = Component.literal(
             """
             §8- §f${player.name.string} §7Ping: §a$ping ms
+            §7TPS: §a$tpsFormatted §7(§a$msptFormatted ms§7)
             §7Date: §a$currentDate
             §7Used memory: §a$usedMemory MB §7/ §a$maxMemory MB
             """.trimIndent()
