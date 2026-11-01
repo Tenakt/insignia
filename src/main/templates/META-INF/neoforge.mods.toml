@@ -12,14 +12,10 @@ displayName="${mod_name}"
 authors="GrindlesStudio"
 
 description='''
-Insignia — мод для управления группами и префиксами игроков.
-
-Возможности:
-- Создание шаблонов групп и префиксов.
-- Назначение личных групп и префиксов игрокам.
-- Настройка отображения тегов в чате и таб-листе.
-- Настраиваемое название сервера в таб-листе.
-- Поддержка русских и английских команд.
+Insignia is a server-focused utility for managing player groups and prefixes.
+Features include reusable group and prefix templates, per-player custom tags,
+independent chat and player-list display settings, a configurable player-list
+header, persistent JSON data, and Russian/English commands.
 '''
 
 [[dependencies.${mod_id}]]
