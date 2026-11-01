@@ -1,6 +1,6 @@
 # Insignia
 
-**Insignia** is a lightweight server-focused moderation and presentation utility for Minecraft 1.21.1 (NeoForge). It lets server owners organize players with groups and custom prefixes, and control how those tags appear in chat and the player list.
+**Insignia** is a lightweight server-focused group and prefix management utility for Minecraft 1.21.1 (NeoForge). It lets server owners organize players with groups and custom prefixes, and control how those tags appear in chat and the player list.
 
 ## Features
 
@@ -34,7 +34,7 @@ Insignia is built for NeoForge. It is not a Fabric or Forge build.
 
 ## Commands
 
-Commands are localized according to the language of the player executing them. The examples below use English command names. Use `/insignia help` or `/insignia help admin) for in-game help.
+Commands are localized according to the language of the player executing them. The examples below use English command names. Use `/insignia help` or `/insignia help admin` for in-game help.
 
 ### Player commands
 
