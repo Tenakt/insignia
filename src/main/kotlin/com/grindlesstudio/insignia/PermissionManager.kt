@@ -11,6 +11,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.UUID
+import java.util.Locale
 
 enum class DisplayMode {
     PREFIX,
@@ -68,7 +69,7 @@ object PermissionManager {
      * Создаёт или обновляет шаблон группы.
      */
     fun createGroup(name: String, colorArg: String) {
-        val key = name.trim().lowercase()
+        val key = name.trim().lowercase(Locale.ROOT)
         if (key.isBlank()) return
 
         val colorCode = ColorUtils.getColorCode(colorArg)
@@ -86,7 +87,7 @@ object PermissionManager {
      * Создаёт или обновляет шаблон префикса.
      */
     fun createPrefix(name: String, colorArg: String, rawText: String) {
-        val key = name.trim().lowercase()
+        val key = name.trim().lowercase(Locale.ROOT)
         if (key.isBlank()) return
 
         val colorCode = ColorUtils.getColorCode(colorArg)
@@ -118,7 +119,7 @@ object PermissionManager {
         val value = groupInput.trim()
         if (value.isBlank()) return
 
-        val key = value.lowercase()
+        val key = value.lowercase(Locale.ROOT)
         val user = getUserData(uuid)
 
         if (storage.groups.containsKey(key)) {
@@ -151,7 +152,7 @@ object PermissionManager {
         val value = prefixInput.trim()
         if (value.isBlank()) return
 
-        val key = value.lowercase()
+        val key = value.lowercase(Locale.ROOT)
         val user = getUserData(uuid)
 
         if (storage.prefixes.containsKey(key)) {
@@ -194,13 +195,13 @@ object PermissionManager {
         slotRaw: String,
         modeRaw: String
     ): Boolean {
-        val slot = when (slotRaw.trim().lowercase()) {
+        val slot = when (slotRaw.trim().lowercase(Locale.ROOT)) {
             "чат", "chat" -> "chat"
             "таб", "tab" -> "tab"
             else -> return false
         }
 
-        val mode = when (modeRaw.trim().lowercase()) {
+        val mode = when (modeRaw.trim().lowercase(Locale.ROOT)) {
             "префикс", "prefix" -> DisplayMode.PREFIX
             "группа", "group" -> DisplayMode.GROUP
             "выкл", "none", "ничего" -> DisplayMode.NONE
@@ -398,7 +399,7 @@ object PermissionManager {
 
                 if (group.name.isBlank()) continue
 
-                target.groups[key.lowercase()] = group
+                target.groups[key.lowercase(Locale.ROOT)] = group
             } catch (e: Exception) {
                 System.err.println(
                     "[Insignia] Пропущена повреждённая группа '$key': " +
@@ -428,7 +429,7 @@ object PermissionManager {
 
                 if (prefix.name.isBlank()) continue
 
-                target.prefixes[key.lowercase()] = prefix
+                target.prefixes[key.lowercase(Locale.ROOT)] = prefix
             } catch (e: Exception) {
                 System.err.println(
                     "[Insignia] Пропущен повреждённый префикс '$key': " +
